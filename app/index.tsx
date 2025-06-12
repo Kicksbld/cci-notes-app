@@ -1,60 +1,52 @@
+import { SignIn } from "@/components/credentials/signIn";
 import { authClient } from "@/lib/auth-client";
-import { useState } from "react";
-import { Button, Text, TextInput, View } from "react-native";
+import { useEffect, useState } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
+import CCILogo from "../assets/images/logo/CCI_logo.svg";
+import { router } from "expo-router";
+import { Text } from "react-native";
+import { useAuthStore } from "@/store/useAuthStore";
 
 export default function Index() {
-  const { data: session } = authClient.useSession();
+  const { data: session, isPending } = authClient.useSession();
+  const setSession = useAuthStore((state) => state.setSession);
+
   const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleSignup = async () => {
-    try {
-      const res = await authClient.signUp.email({
+  const handleLogin = async () => {
+    await authClient.signIn.email(
+      {
         email,
         password,
-        name,
-      });
-      console.log(res);
-    } catch (error) {
-      console.error(error);
-    }
+      },
+      {
+        onSuccess: (ctx) => {
+          router.replace("/(tabs)/(protected)");
+        },
+      }
+    );
   };
 
-  const handleLogin = async () => {
-    try {
-      const res = await authClient.signIn.email({
-        email,
-        password,
-      });
-      console.log(res);
-    } catch (error) {
-      console.error(error);
+  useEffect(() => {
+    if (isPending) return;
+
+    if (session?.session?.token) {
+      setSession(session);
+      router.replace("/(tabs)/(protected)");
+    } else {
+      setSession(null);
     }
-  };
+  }, [session, isPending]);
 
   return (
-    <View>
-      <TextInput
-        placeholder="Name"
-        value={name}
-        onChangeText={setName}
-        className="border border-black/50"
+    <SafeAreaView className="flex-1 gap-14 items-center bg-white">
+      <CCILogo width={319} height={163} />
+      <SignIn
+        onPress={handleLogin}
+        output={{ email, setEmail, password, setPassword }}
       />
-      <TextInput
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        className="border border-black/50"
-      />
-      <TextInput
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        className="border border-black/50"
-      />
-      <Button title="Login" onPress={handleLogin} />
-      {session?.user && <Text>{session.user.name}</Text>}
-    </View>
+      <Text onPress={() => router.replace("/(tabs)/(protected)")}>test</Text>
+    </SafeAreaView>
   );
 }
